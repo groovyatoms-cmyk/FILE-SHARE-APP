@@ -7,6 +7,7 @@ export type SignalingConnectionState = "idle" | "connecting" | "open" | "reconne
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 10_000;
 const MAX_RECONNECT_ATTEMPTS = 6;
+const CONNECT_TIMEOUT_MS = 10_000;
 
 /**
  * Thin, typed wrapper around the signaling WebSocket. Handles reconnection
@@ -25,6 +26,13 @@ export class SignalingClient {
   constructor(private readonly url: string) {}
 
   connect(): Promise<void> {
+    if (!this.url) {
+      return Promise.reject(
+        new Error(
+          "No signaling server URL configured (VITE_SIGNALING_URL is missing). Check your .env file.",
+        ),
+      );
+    }
     this.manuallyClosed = false;
     return this.openSocket();
   }
@@ -32,13 +40,41 @@ export class SignalingClient {
   private openSocket(): Promise<void> {
     this.setState(this.reconnectAttempts > 0 ? "reconnecting" : "connecting");
     return new Promise((resolve, reject) => {
-      const socket = new WebSocket(this.url);
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutTimer);
+        fn();
+      };
+
+      // A firewall or blocked port can silently drop the connection attempt
+      // without ever firing 'error' or 'close' — without this, the caller's
+      // promise (and thus the whole UI, which awaits it) would hang forever.
+      const timeoutTimer = setTimeout(() => {
+        this.socket?.close();
+        settle(() =>
+          reject(
+            new Error(
+              `Could not reach the signaling server at ${this.url} within ${CONNECT_TIMEOUT_MS / 1000}s. Check that it's running and reachable.`,
+            ),
+          ),
+        );
+      }, CONNECT_TIMEOUT_MS);
+
+      let socket: WebSocket;
+      try {
+        socket = new WebSocket(this.url);
+      } catch (err) {
+        settle(() => reject(err instanceof Error ? err : new Error("Failed to open a WebSocket connection")));
+        return;
+      }
       this.socket = socket;
 
       socket.addEventListener("open", () => {
         this.reconnectAttempts = 0;
         this.setState("open");
-        resolve();
+        settle(resolve);
       });
 
       socket.addEventListener("message", (event) => {
@@ -53,14 +89,16 @@ export class SignalingClient {
       socket.addEventListener("close", () => {
         if (this.manuallyClosed) {
           this.setState("closed");
+          settle(() => reject(new Error("Signaling connection closed")));
           return;
         }
+        settle(() => reject(new Error("Failed to connect to signaling server")));
         this.scheduleReconnect();
       });
 
       socket.addEventListener("error", () => {
-        // 'close' fires after 'error' for browser WebSockets; reconnection is handled there.
-        if (this.state === "connecting") reject(new Error("Failed to connect to signaling server"));
+        // 'close' fires right after 'error' for browser WebSockets and carries
+        // the actual reject/reconnect logic above; nothing further to do here.
       });
     });
   }

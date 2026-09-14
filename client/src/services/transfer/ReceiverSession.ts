@@ -78,7 +78,17 @@ export class ReceiverSession {
     useConnectionStore.getState().setConnectionState("CREATING_SESSION");
 
     this.wireSignalingHandlers();
-    await this.signaling.connect();
+    try {
+      await this.signaling.connect();
+    } catch (err) {
+      // Never let this reject unhandled — without it, a failed connection
+      // (server down, bad VITE_SIGNALING_URL, blocked network) leaves the
+      // receiver's UI stuck on "Connecting…" forever with no explanation.
+      useConnectionStore.getState().setError(err instanceof Error ? err.message : "Could not connect to the signaling server.");
+      useConnectionStore.getState().setConnectionState("FAILED");
+      this.joinRequested = false;
+      return;
+    }
 
     this.signaling.send({
       type: "JOIN_SESSION",
@@ -149,6 +159,11 @@ export class ReceiverSession {
     this.signaling.on("ERROR", (env) => {
       const payload = env.payload as { message: string };
       useConnectionStore.getState().setError(payload.message);
+    });
+
+    this.signaling.on("RATE_LIMITED", () => {
+      useConnectionStore.getState().setError("Too many requests to the signaling server. Please wait a moment and try again.");
+      useConnectionStore.getState().setConnectionState("FAILED");
     });
   }
 

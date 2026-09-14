@@ -85,13 +85,29 @@ export function SendPage() {
   }
 
   if (step === "pairing") {
+    if (connection.errorMessage) {
+      return (
+        <Stack spacing={3} alignItems="center" textAlign="center" sx={{ maxWidth: 420, mx: "auto" }}>
+          <Typography variant="h5">Couldn't Start Session</Typography>
+          <Typography color="error">{connection.errorMessage}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Check that the signaling server is running and reachable, then try again.
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button color="inherit" onClick={handleCancel}>
+              Back
+            </Button>
+            <Button variant="contained" onClick={handleGenerateQr}>
+              Try Again
+            </Button>
+          </Stack>
+        </Stack>
+      );
+    }
+
     return (
       <Stack spacing={3} alignItems="center" textAlign="center">
         <Typography variant="h5">Waiting for Receiver</Typography>
-
-        {connection.errorMessage && (
-          <Typography color="error">{connection.errorMessage}</Typography>
-        )}
 
         {connection.sessionId ? (
           <>

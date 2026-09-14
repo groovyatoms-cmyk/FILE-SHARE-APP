@@ -79,7 +79,18 @@ export class SenderSession {
     }
 
     this.wireSignalingHandlers();
-    await this.signaling.connect();
+    try {
+      await this.signaling.connect();
+    } catch (err) {
+      // Never let this reject unhandled — the caller (SendPage) is already
+      // showing a "waiting" UI at this point and has no other way to learn
+      // the connection failed, so the app would otherwise hang forever with
+      // no feedback (session not found, server down, bad VITE_SIGNALING_URL).
+      useConnectionStore.getState().setError(err instanceof Error ? err.message : "Could not connect to the signaling server.");
+      useConnectionStore.getState().setConnectionState("FAILED");
+      useTransferStore.getState().setTransferState("FAILED");
+      return;
+    }
 
     useTransferStore.getState().setTransferState("WAITING_FOR_PEER");
     useConnectionStore.getState().setConnectionState("CREATING_SESSION");
@@ -129,6 +140,12 @@ export class SenderSession {
     this.signaling.on("ERROR", (env) => {
       const payload = env.payload as { message: string };
       useConnectionStore.getState().setError(payload.message);
+    });
+
+    this.signaling.on("RATE_LIMITED", () => {
+      useConnectionStore.getState().setError("Too many requests to the signaling server. Please wait a moment and try again.");
+      useConnectionStore.getState().setConnectionState("FAILED");
+      useTransferStore.getState().setTransferState("FAILED");
     });
   }
 
