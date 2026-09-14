@@ -1,0 +1,50 @@
+services:
+  signaling:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: p2p-file-share-signaling:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8081}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        VITE_APP_NAME: ${VITE_APP_NAME:-P2P File Share}
+        VITE_SIGNALING_URL: ${VITE_SIGNALING_URL:-ws://localhost:8080}
+        VITE_STUN_SERVER: ${VITE_STUN_SERVER:-stun:stun.l.google.com:19302}
+        VITE_TURN_SERVER: ${VITE_TURN_SERVER:-}
+        VITE_TURN_USERNAME: ${VITE_TURN_USERNAME:-}
+        VITE_TURN_CREDENTIAL: ${VITE_TURN_CREDENTIAL:-}
+        VITE_SESSION_TIMEOUT: ${VITE_SESSION_TIMEOUT:-1800}
+    image: p2p-file-share-client:latest
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - signaling
+
+  # Optional self-hosted TURN server for production deployments where a
+  # public STUN server alone isn't enough to traverse restrictive NATs.
+  # Uncomment and configure with real credentials before enabling.
+  # coturn:
+  #   image: coturn/coturn:latest
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   command:
+  #     - "-n"
+  #     - "--log-file=stdout"
+  #     - "--realm=p2pfileshare.local"
+  #     - "--user=p2puser:changeme"
