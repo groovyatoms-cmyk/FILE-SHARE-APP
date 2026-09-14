@@ -1,93 +1,92 @@
-import { Box, Card, CardActionArea, CardContent, Grid, Stack, Typography } from "@mui/material";
+import { Box, Chip, Grid, Stack, Typography, alpha } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import UploadOutlinedIcon from "@mui/icons-material/UploadOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
 import CloudOffOutlinedIcon from "@mui/icons-material/CloudOffOutlined";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import { ActionCard } from "../components/ActionCard";
 
 export function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <Stack spacing={5}>
-      <Stack spacing={1} textAlign="center">
-        <Typography variant="h3" component="h1" fontWeight={700}>
+    <Stack spacing={6}>
+      <Stack spacing={2} textAlign="center" alignItems="center">
+        <Chip
+          icon={<AutoAwesomeOutlinedIcon sx={{ fontSize: 16 }} />}
+          label="Private by design"
+          size="small"
+          sx={{
+            bgcolor: (t) => t.palette.royal.goldSoft,
+            color: (t) => t.palette.royal.gold,
+            fontWeight: 700,
+            "& .MuiChip-icon": { color: "inherit" },
+          }}
+        />
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
+            fontWeight: 800,
+            backgroundImage: (t) => `linear-gradient(135deg, ${t.palette.text.primary}, ${t.palette.primary.main})`,
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
           P2P File Share
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 480 }}>
           Transfer files directly between devices. No cloud storage, no size limits, no accounts.
         </Typography>
       </Stack>
 
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6}>
-          <Card>
-            <CardActionArea onClick={() => navigate("/send")} sx={{ p: 4, height: "100%" }}>
-              <CardContent>
-                <Stack spacing={1.5} alignItems="center" textAlign="center">
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: "50%",
-                      bgcolor: "primary.main",
-                      color: "primary.contrastText",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <UploadOutlinedIcon fontSize="large" />
-                  </Box>
-                  <Typography variant="h6">Send</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Send files to another device
-                  </Typography>
-                </Stack>
-              </CardContent>
-            </CardActionArea>
-          </Card>
+          <ActionCard
+            onClick={() => navigate("/send")}
+            variant="primary"
+            icon={<UploadOutlinedIcon fontSize="large" />}
+            title="Send"
+            description="Send files to another device"
+          />
         </Grid>
         <Grid item xs={12} sm={6}>
-          <Card>
-            <CardActionArea onClick={() => navigate("/receive")} sx={{ p: 4, height: "100%" }}>
-              <CardContent>
-                <Stack spacing={1.5} alignItems="center" textAlign="center">
-                  <Box
-                    sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: "50%",
-                      bgcolor: "secondary.main",
-                      color: "secondary.contrastText",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <DownloadOutlinedIcon fontSize="large" />
-                  </Box>
-                  <Typography variant="h6">Receive</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Receive files from another device
-                  </Typography>
-                </Stack>
-              </CardContent>
-            </CardActionArea>
-          </Card>
+          <ActionCard
+            onClick={() => navigate("/receive")}
+            variant="gold"
+            icon={<DownloadOutlinedIcon fontSize="large" />}
+            title="Receive"
+            description="Receive files from another device"
+          />
         </Grid>
       </Grid>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={2.5}>
         {[
-          { icon: <LockOutlinedIcon color="action" />, text: "End-to-end via WebRTC, optional app-level encryption" },
-          { icon: <BoltOutlinedIcon color="action" />, text: "Resumable, chunked transfers with live speed & ETA" },
-          { icon: <CloudOffOutlinedIcon color="action" />, text: "No files ever touch our servers" },
+          { icon: <LockOutlinedIcon fontSize="small" />, text: "End-to-end via WebRTC, optional app-level encryption" },
+          { icon: <BoltOutlinedIcon fontSize="small" />, text: "Resumable, chunked transfers with live speed & ETA" },
+          { icon: <CloudOffOutlinedIcon fontSize="small" />, text: "No files ever touch our servers" },
         ].map((f) => (
           <Grid item xs={12} sm={4} key={f.text}>
             <Stack direction="row" spacing={1.5} alignItems="center">
-              {f.icon}
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === "dark" ? 0.18 : 0.1),
+                  color: "primary.main",
+                  flexShrink: 0,
+                }}
+              >
+                {f.icon}
+              </Box>
               <Typography variant="body2" color="text.secondary">
                 {f.text}
               </Typography>
