@@ -9,7 +9,11 @@
     "client"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
+    "postinstall": "npm run build --workspace=shared",
+    "predev": "npm run build --workspace=shared",
+    "predev:server": "npm run build --workspace=shared",
+    "predev:client": "npm run build --workspace=shared",
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm run dev --workspace=server",
     "dev:client": "npm run dev --workspace=client",
     "build": "npm run build --workspace=shared && npm run build --workspace=server && npm run build --workspace=client",
@@ -19,6 +23,9 @@
     "test": "npm run test --workspace=shared && npm run test --workspace=server && npm run test --workspace=client",
     "lint": "npm run lint --workspace=server && npm run lint --workspace=client",
     "typecheck": "npm run typecheck --workspace=shared && npm run typecheck --workspace=server && npm run typecheck --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
   },
   "engines": {
     "node": ">=18.0.0"
