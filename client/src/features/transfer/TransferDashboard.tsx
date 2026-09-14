@@ -51,6 +51,19 @@ export function TransferDashboard({ controller }: { controller: TransferControll
     );
   }
 
+  if (transferState === "CANCELLED") {
+    return (
+      <Stack spacing={2} alignItems="flex-start">
+        <Alert severity="info" sx={{ width: "100%" }}>
+          Transfer cancelled.
+        </Alert>
+        <Button variant="contained" onClick={() => navigate(direction === "send" ? "/send" : "/receive")}>
+          Start New Transfer
+        </Button>
+      </Stack>
+    );
+  }
+
   if (transferState === "EXPIRED") {
     return (
       <Stack spacing={2} alignItems="flex-start">

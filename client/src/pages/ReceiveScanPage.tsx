@@ -28,6 +28,21 @@ export function ReceiveScanPage() {
     return () => sessionRef.current?.destroy();
   }, []);
 
+  // A join can fail (wrong code, expired/invalid QR) without ever reaching
+  // SESSION_JOINED. Once it does, discard the session and re-arm the form so
+  // the user isn't stuck on a permanently disabled "Connect" button — a
+  // ReceiverSession's join() is one-shot by design (see joinRequested guard
+  // in ReceiverSession.ts, which exists to prevent a duplicate join from
+  // wiring a second signaling/WebRTC pipeline for the same transfer).
+  useEffect(() => {
+    if (connection.errorMessage && joining) {
+      setJoining(false);
+      setJoined(false);
+      sessionRef.current?.destroy();
+      sessionRef.current = null;
+    }
+  }, [connection.errorMessage, joining]);
+
   const startSession = () => {
     if (sessionRef.current) return sessionRef.current;
     const displayName = settings.deviceName || detectDeviceLabel();
@@ -45,6 +60,7 @@ export function ReceiveScanPage() {
       );
       return;
     }
+    connection.setError(null);
     setJoining(true);
     const session = startSession();
     setJoined(true);
@@ -52,6 +68,7 @@ export function ReceiveScanPage() {
   };
 
   const handlePairingCode = async (code: string) => {
+    connection.setError(null);
     setJoining(true);
     const session = startSession();
     setJoined(true);
