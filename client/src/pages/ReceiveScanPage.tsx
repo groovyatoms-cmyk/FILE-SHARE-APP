@@ -6,6 +6,7 @@ import { PairingCodeInput } from "../components/PairingCodeInput";
 import { IncomingTransferDialog } from "../components/IncomingTransferDialog";
 import { TransferDashboard } from "../features/transfer/TransferDashboard";
 import { ReceiverSession, type IncomingOffer } from "../services/transfer/ReceiverSession";
+import { resolveSignalingUrl } from "../services/signaling/resolveSignalingUrl";
 import { parseQrPayload } from "../services/qr/qrPayload";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useConnectionStore } from "../stores/useConnectionStore";
@@ -46,7 +47,7 @@ export function ReceiveScanPage() {
   const startSession = () => {
     if (sessionRef.current) return sessionRef.current;
     const displayName = settings.deviceName || detectDeviceLabel();
-    const session = new ReceiverSession(import.meta.env.VITE_SIGNALING_URL, displayName);
+    const session = new ReceiverSession(resolveSignalingUrl(), displayName);
     session.onIncomingOffer((offer) => setIncomingOffer(offer));
     sessionRef.current = session;
     return session;

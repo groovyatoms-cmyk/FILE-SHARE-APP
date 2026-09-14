@@ -11,6 +11,7 @@ import { SessionTimer } from "../components/SessionTimer";
 import { EmptyState } from "../components/EmptyState";
 import { TransferDashboard } from "../features/transfer/TransferDashboard";
 import { SenderSession } from "../services/transfer/SenderSession";
+import { resolveSignalingUrl } from "../services/signaling/resolveSignalingUrl";
 import { buildQrPayload } from "../services/qr/qrPayload";
 import { formatBytes } from "../utils/format";
 import { detectDeviceLabel } from "../services/device/deviceInfo";
@@ -45,7 +46,7 @@ export function SendPage() {
     return buildQrPayload({
       sessionId: connection.sessionId,
       token: connection.token,
-      signalingUrl: import.meta.env.VITE_SIGNALING_URL,
+      signalingUrl: resolveSignalingUrl(),
       expiresAt: connection.expiresAt,
     });
   }, [connection.sessionId, connection.token, connection.expiresAt]);
@@ -54,7 +55,7 @@ export function SendPage() {
     connection.reset();
     const displayName = settings.deviceName || detectDeviceLabel();
     const session = new SenderSession({
-      signalingUrl: import.meta.env.VITE_SIGNALING_URL,
+      signalingUrl: resolveSignalingUrl(),
       displayName,
       timeoutSeconds: settings.sessionTimeoutSeconds,
       encryptionEnabled: settings.applicationEncryption,

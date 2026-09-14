@@ -2,7 +2,8 @@
 
 interface ImportMetaEnv {
   readonly VITE_APP_NAME: string;
-  readonly VITE_SIGNALING_URL: string;
+  /** Optional — resolveSignalingUrl() falls back to ws(s)://<host>:8080 when unset. */
+  readonly VITE_SIGNALING_URL?: string;
   readonly VITE_STUN_SERVER: string;
   readonly VITE_TURN_SERVER?: string;
   readonly VITE_TURN_USERNAME?: string;
