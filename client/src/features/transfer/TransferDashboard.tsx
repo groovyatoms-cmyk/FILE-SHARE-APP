@@ -33,9 +33,14 @@ export function TransferDashboard({ controller }: { controller: TransferControll
 
   if (transferState === "INTERRUPTED") {
     return (
-      <Stack spacing={2}>
-        <Alert severity="warning">Connection interrupted. Your transfer is safe. Reconnecting…</Alert>
-        <LinearProgress />
+      <Stack spacing={2} alignItems="flex-start">
+        <Alert severity="warning" sx={{ width: "100%" }}>
+          Connection interrupted. Your transfer is safe. Reconnecting…
+        </Alert>
+        <LinearProgress sx={{ width: "100%" }} />
+        <Button color="inherit" onClick={() => controller.cancelAll()}>
+          Cancel
+        </Button>
       </Stack>
     );
   }

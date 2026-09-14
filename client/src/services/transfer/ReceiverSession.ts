@@ -18,7 +18,10 @@ import { useConnectionStore } from "../../stores/useConnectionStore";
 import { useTransferStore } from "../../stores/useTransferStore";
 import { useHistoryStore } from "../../stores/useHistoryStore";
 import { RollingSpeedTracker } from "../../utils/rollingAverage";
+import { NAT_TRAVERSAL_FAILURE_MESSAGE } from "./natFailureMessage";
 import { saveAs } from "file-saver";
+
+const GIVE_UP_AFTER_MS = 30_000;
 
 export interface JoinParams {
   sessionId?: string;
@@ -50,6 +53,7 @@ export class ReceiverSession {
   private pendingChunkMeta: ChunkMetaMessage | null = null;
   private saveDirHandle: FileSystemDirectoryHandle | null = null;
   private overallTracker = new RollingSpeedTracker();
+  private giveUpTimer: ReturnType<typeof setTimeout> | null = null;
   private offerHandlers = new Set<IncomingOfferHandler>();
   private cancelled = false;
 
@@ -178,14 +182,35 @@ export class ReceiverSession {
 
     peer.onConnectionStateChange((state) => {
       if (state === "connected") {
+        if (this.giveUpTimer) {
+          clearTimeout(this.giveUpTimer);
+          this.giveUpTimer = null;
+        }
         useConnectionStore.getState().setConnectionState("CONNECTED");
       } else if ((state === "disconnected" || state === "failed") && !this.cancelled) {
         useTransferStore.getState().setTransferState("INTERRUPTED");
         useConnectionStore.getState().setConnectionState("RECONNECTING");
+        // Unlike the sender, the receiver never re-offers on its own — it
+        // just waits for the sender's retry. If nothing recovers within a
+        // window covering the sender's own retry budget, stop waiting
+        // forever and tell the user why instead of sitting in
+        // "Reconnecting…" indefinitely with no escape.
+        if (!this.giveUpTimer) {
+          this.giveUpTimer = setTimeout(() => {
+            if (this.cancelled) return;
+            useConnectionStore.getState().setError(NAT_TRAVERSAL_FAILURE_MESSAGE);
+            useConnectionStore.getState().setConnectionState("FAILED");
+            useTransferStore.getState().setTransferState("FAILED");
+          }, GIVE_UP_AFTER_MS);
+        }
       }
     });
 
     peer.onChannelsReady(() => {
+      if (this.giveUpTimer) {
+        clearTimeout(this.giveUpTimer);
+        this.giveUpTimer = null;
+      }
       useConnectionStore.getState().setConnectionState("CONNECTED");
     });
 
@@ -400,6 +425,7 @@ export class ReceiverSession {
   }
 
   destroy(): void {
+    if (this.giveUpTimer) clearTimeout(this.giveUpTimer);
     this.peer?.close();
     this.signaling.close();
   }

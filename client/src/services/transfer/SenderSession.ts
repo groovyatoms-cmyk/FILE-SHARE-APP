@@ -18,10 +18,12 @@ import { useTransferStore } from "../../stores/useTransferStore";
 import { useHistoryStore } from "../../stores/useHistoryStore";
 import { RollingSpeedTracker } from "../../utils/rollingAverage";
 import type { QueuedFile } from "../../stores/useSessionStore";
+import { NAT_TRAVERSAL_FAILURE_MESSAGE } from "./natFailureMessage";
 
 const PING_INTERVAL_MS = 8000;
 const PONG_TIMEOUT_MS = 20000;
 const RECONNECT_GRACE_MS = 3000;
+const MAX_WEBRTC_RECONNECT_ATTEMPTS = 5;
 
 export interface SenderSessionOptions {
   signalingUrl: string;
@@ -48,6 +50,7 @@ export class SenderSession {
   private pongTimeout: ReturnType<typeof setTimeout> | null = null;
   private cancelled = false;
   private reconnecting = false;
+  private webrtcReconnectAttempts = 0;
 
   constructor(private readonly opts: SenderSessionOptions) {
     this.signaling = new SignalingClient(opts.signalingUrl);
@@ -180,6 +183,7 @@ export class SenderSession {
     peer.onChannelsReady(() => {
       if (this.reconnecting) {
         this.reconnecting = false;
+        this.webrtcReconnectAttempts = 0;
         useConnectionStore.getState().setConnectionState("CONNECTED");
         useTransferStore.getState().setTransferState("TRANSFERRING");
         this.resumeCurrentFileAfterReconnect();
@@ -369,7 +373,19 @@ export class SenderSession {
 
   private handleConnectionLoss(): void {
     const transferState = useTransferStore.getState().transferState;
-    if (transferState === "COMPLETED" || transferState === "CANCELLED") return;
+    if (transferState === "COMPLETED" || transferState === "CANCELLED" || transferState === "FAILED") return;
+
+    if (this.webrtcReconnectAttempts >= MAX_WEBRTC_RECONNECT_ATTEMPTS) {
+      // Retrying further won't help if the network itself can't carry
+      // peer-to-peer traffic — stop looping forever and tell the user why.
+      useConnectionStore.getState().setError(NAT_TRAVERSAL_FAILURE_MESSAGE);
+      useConnectionStore.getState().setConnectionState("FAILED");
+      useTransferStore.getState().setTransferState("FAILED");
+      this.activePump?.cancel();
+      return;
+    }
+
+    this.webrtcReconnectAttempts += 1;
     useTransferStore.getState().setTransferState("INTERRUPTED");
     useConnectionStore.getState().setConnectionState("RECONNECTING");
     this.activePump?.pause();
